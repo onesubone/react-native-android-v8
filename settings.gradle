@@ -1,0 +1,4 @@
+rootProject.name = 'v8-emo'
+
+include ':app'
+include ':ReactAndroid'
