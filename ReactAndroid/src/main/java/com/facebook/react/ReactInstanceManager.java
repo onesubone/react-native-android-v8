@@ -38,6 +38,8 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactMarker;
 import com.facebook.react.bridge.ReactMarkerConstants;
+import com.facebook.react.bridge.queue.MessageQueueThread;
+import com.facebook.react.bridge.queue.ReactQueueConfiguration;
 import com.facebook.react.bridge.queue.ReactQueueConfigurationSpec;
 import com.facebook.react.common.LifecycleState;
 import com.facebook.react.common.ReactConstants;
@@ -150,6 +152,7 @@ public class ReactInstanceManager {
   private final boolean mLazyViewManagersEnabled;
   private final boolean mSetupReactContextInBackgroundEnabled;
   private final boolean mUseSeparateUIBackgroundThread;
+  private final MessageQueueThread mCustomJSMessageQueueThread;
 
   private final ReactInstanceDevCommandsHandler mDevInterface =
       new ReactInstanceDevCommandsHandler() {
@@ -222,7 +225,8 @@ public class ReactInstanceManager {
     boolean lazyNativeModulesEnabled,
     boolean lazyViewManagersEnabled,
     boolean setupReactContextInBackgroundEnabled,
-    boolean useSeparateUIBackgroundThread) {
+    boolean useSeparateUIBackgroundThread,
+    MessageQueueThread customJSMessageQueueThread) {
 
     initializeSoLoaderIfNecessary(applicationContext);
 
@@ -251,6 +255,7 @@ public class ReactInstanceManager {
     mLazyViewManagersEnabled = lazyViewManagersEnabled;
     mSetupReactContextInBackgroundEnabled = setupReactContextInBackgroundEnabled;
     mUseSeparateUIBackgroundThread = useSeparateUIBackgroundThread;
+    mCustomJSMessageQueueThread = customJSMessageQueueThread;
 
     // Instantiate ReactChoreographer in UI thread.
     ReactChoreographer.initialize();
@@ -969,7 +974,8 @@ public class ReactInstanceManager {
       .setRegistry(nativeModuleRegistry)
       .setJSModuleRegistry(jsModulesBuilder.build())
       .setJSBundleLoader(jsBundleLoader)
-      .setNativeModuleCallExceptionHandler(exceptionHandler);
+      .setNativeModuleCallExceptionHandler(exceptionHandler)
+      .setCustomJSmessageQueueThread(mCustomJSMessageQueueThread);
 
     ReactMarker.logMarker(CREATE_CATALYST_INSTANCE_START);
     // CREATE_CATALYST_INSTANCE_END is in JSCExecutor.cpp

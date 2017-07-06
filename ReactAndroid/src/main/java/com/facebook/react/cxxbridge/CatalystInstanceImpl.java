@@ -74,7 +74,7 @@ public class CatalystInstanceImpl implements CatalystInstance {
   }
 
   // Access from any thread
-  private final ReactQueueConfigurationImpl mReactQueueConfiguration;
+  private final ReactQueueConfiguration mReactQueueConfiguration;
   private final CopyOnWriteArrayList<NotThreadSafeBridgeIdleDebugListener> mBridgeIdleListeners;
   private final AtomicInteger mPendingJSCalls = new AtomicInteger(0);
   private final String mJsPendingCallsTitleForTrace =
@@ -106,13 +106,41 @@ public class CatalystInstanceImpl implements CatalystInstance {
       final NativeModuleRegistry registry,
       final JavaScriptModuleRegistry jsModuleRegistry,
       final JSBundleLoader jsBundleLoader,
-      NativeModuleCallExceptionHandler nativeModuleCallExceptionHandler) {
+      NativeModuleCallExceptionHandler nativeModuleCallExceptionHandler,
+      final MessageQueueThread jsMessageQueueThread) {
     FLog.d(ReactConstants.TAG, "Initializing React Xplat Bridge.");
     mHybridData = initHybrid();
 
-    mReactQueueConfiguration = ReactQueueConfigurationImpl.create(
+    ReactQueueConfiguration reactQueueConfiguration = ReactQueueConfigurationImpl.create(
         ReactQueueConfigurationSpec,
         new NativeExceptionHandler());
+    if(null != jsMessageQueueThread) {
+      final ReactQueueConfiguration delegate = reactQueueConfiguration;
+      reactQueueConfiguration = new ReactQueueConfiguration() {
+
+        @Override
+        public MessageQueueThread getUIQueueThread() {
+          return delegate.getUIQueueThread();
+        }
+
+        @Nullable
+        @Override
+        public MessageQueueThread getUIBackgroundQueueThread() {
+          return delegate.getUIBackgroundQueueThread();
+        }
+
+        @Override
+        public MessageQueueThread getNativeModulesQueueThread() {
+          return delegate.getNativeModulesQueueThread();
+        }
+
+        @Override
+        public MessageQueueThread getJSQueueThread() {
+          return jsMessageQueueThread;
+        }
+      };
+    }
+    mReactQueueConfiguration = reactQueueConfiguration;
     mBridgeIdleListeners = new CopyOnWriteArrayList<>();
     mJavaRegistry = registry;
     mJSModuleRegistry = jsModuleRegistry;
@@ -126,7 +154,7 @@ public class CatalystInstanceImpl implements CatalystInstance {
     initializeBridge(
       new BridgeCallback(this),
       jsExecutor,
-      mReactQueueConfiguration.getJSQueueThread(),
+      jsMessageQueueThread == null ? mReactQueueConfiguration.getJSQueueThread() : jsMessageQueueThread,
       mNativeModulesQueueThread,
       mUIBackgroundQueueThread,
       mJavaRegistry.getJavaModules(this),
@@ -514,14 +542,13 @@ public class CatalystInstanceImpl implements CatalystInstance {
   }
 
   public static class Builder {
-
+    private @Nullable MessageQueueThread mCustomJSMessageQueueThread;
     private @Nullable ReactQueueConfigurationSpec mReactQueueConfigurationSpec;
     private @Nullable JSBundleLoader mJSBundleLoader;
     private @Nullable NativeModuleRegistry mRegistry;
     private @Nullable JavaScriptModuleRegistry mJSModuleRegistry;
     private @Nullable JavaScriptExecutor mJSExecutor;
     private @Nullable NativeModuleCallExceptionHandler mNativeModuleCallExceptionHandler;
-
     public Builder setReactQueueConfigurationSpec(
         ReactQueueConfigurationSpec ReactQueueConfigurationSpec) {
       mReactQueueConfigurationSpec = ReactQueueConfigurationSpec;
@@ -554,6 +581,11 @@ public class CatalystInstanceImpl implements CatalystInstance {
       return this;
     }
 
+    public Builder setCustomJSmessageQueueThread(MessageQueueThread messageQueueThread) {
+      mCustomJSMessageQueueThread = messageQueueThread;
+      return this;
+    }
+
     public CatalystInstanceImpl build() {
       return new CatalystInstanceImpl(
           Assertions.assertNotNull(mReactQueueConfigurationSpec),
@@ -561,7 +593,8 @@ public class CatalystInstanceImpl implements CatalystInstance {
           Assertions.assertNotNull(mRegistry),
           Assertions.assertNotNull(mJSModuleRegistry),
           Assertions.assertNotNull(mJSBundleLoader),
-          Assertions.assertNotNull(mNativeModuleCallExceptionHandler));
+          Assertions.assertNotNull(mNativeModuleCallExceptionHandler),
+          mCustomJSMessageQueueThread);
     }
   }
 }

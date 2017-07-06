@@ -1,4 +1,4 @@
-rootProject.name = 'v8-emo'
+rootProject.name = 'v8-demo'
 
 include ':app'
 include ':ReactAndroid'

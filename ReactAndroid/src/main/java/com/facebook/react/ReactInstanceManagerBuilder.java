@@ -13,6 +13,8 @@ import android.app.Application;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.bridge.NativeModuleCallExceptionHandler;
 import com.facebook.react.bridge.NotThreadSafeBridgeIdleDebugListener;
+import com.facebook.react.bridge.queue.MessageQueueThread;
+import com.facebook.react.bridge.queue.ReactQueueConfiguration;
 import com.facebook.react.common.LifecycleState;
 import com.facebook.react.cxxbridge.JSBundleLoader;
 import com.facebook.react.devsupport.interfaces.DevSupportManager;
@@ -44,6 +46,7 @@ public class ReactInstanceManagerBuilder {
   protected boolean mLazyViewManagersEnabled;
   protected boolean mSetupReactContextInBackground;
   protected boolean mUseSeparateUIBackgroundThread;
+  protected MessageQueueThread mCustomJSMessageQueueThread = null;
 
   /* package protected */ ReactInstanceManagerBuilder() {
   }
@@ -200,6 +203,11 @@ public class ReactInstanceManagerBuilder {
    return this;
   }
 
+  public ReactInstanceManagerBuilder setCustomJSMessageQueueThread(MessageQueueThread jsMessageQueueThread) {
+    mCustomJSMessageQueueThread = jsMessageQueueThread;
+    return this;
+  }
+
   /**
    * Instantiates a new {@link ReactInstanceManager}.
    * Before calling {@code build}, the following must be called:
@@ -246,6 +254,7 @@ public class ReactInstanceManagerBuilder {
       mLazyNativeModulesEnabled,
       mLazyViewManagersEnabled,
       mSetupReactContextInBackground,
-      mUseSeparateUIBackgroundThread);
+      mUseSeparateUIBackgroundThread,
+      mCustomJSMessageQueueThread);
   }
 }

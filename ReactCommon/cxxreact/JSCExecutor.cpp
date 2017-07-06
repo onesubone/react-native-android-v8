@@ -18,6 +18,8 @@
 
 #include <jschelpers/JSCHelpers.h>
 #include <jschelpers/Value.h>
+#include "V8Executor.h"
+
 
 #ifdef WITH_INSPECTOR
 #include <jschelpers/InspectorInterfaces.h>
@@ -61,6 +63,12 @@
 #ifdef JSC_HAS_PERF_STATS_API
 #include "JSCPerfStats.h"
 #endif
+
+#include <android/log.h>
+#define _RN_V8_DEBUG_ 1
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO  , "V8Application", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG  , "V8Application", __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN  , "V8Application", __VA_ARGS__)
 
 namespace facebook {
 namespace react {
@@ -132,7 +140,8 @@ static JSValueRef nativeInjectHMRUpdate(
 
 std::unique_ptr<JSExecutor> JSCExecutorFactory::createJSExecutor(
     std::shared_ptr<ExecutorDelegate> delegate, std::shared_ptr<MessageQueueThread> jsQueue) {
-  return folly::make_unique<JSCExecutor>(delegate, jsQueue, m_jscConfig);
+    //return folly::make_unique<JSCExecutor>(delegate, jsQueue, m_jscConfig);
+    return std::unique_ptr<JSExecutor>(new v8::V8Executor(delegate, jsQueue, m_jscConfig));
 }
 
 JSCExecutor::JSCExecutor(std::shared_ptr<ExecutorDelegate> delegate,
@@ -195,17 +204,20 @@ void JSCExecutor::initOnJSVMThread() throw(JSException) {
 
   #if defined(WITH_FB_JSC_TUNING) && defined(__ANDROID__)
   configureJSCForAndroid(m_jscConfig);
+  LOGI("JSCExecutor.initOnJSVMThread name: %s", folly::toJson(m_jscConfig).c_str());
   #endif
 
   // Create a custom global class, so we can store data in it later using JSObjectSetPrivate
   JSClassRef globalClass = nullptr;
   {
     SystraceSection s("JSClassCreate");
+    LOGI("JSCExecutor.JSClassCreate");
     JSClassDefinition definition = kJSClassDefinitionEmpty;
     definition.attributes |= kJSClassAttributeNoAutomaticPrototype;
     globalClass = JSC_JSClassCreate(useCustomJSC, &definition);
   }
   {
+    LOGI("JSCExecutor.JSGlobalContextCreateInGroup");
     SystraceSection s("JSGlobalContextCreateInGroup");
     m_context = JSC_JSGlobalContextCreateInGroup(useCustomJSC, nullptr, globalClass);
   }
@@ -301,6 +313,7 @@ void JSCExecutor::loadApplicationScript(std::unique_ptr<const JSBigString> scrip
 
   // TODO t15069155: reduce the number of overrides here
 #ifdef WITH_FBJSCEXTENSIONS
+  LOGI("JSCExecutor.loadApplicationScript WITH_FBJSCEXTENSIONS");
   if (auto fileStr = dynamic_cast<const JSBigFileString *>(script.get())) {
     JSLoadSourceStatus jsStatus;
     auto bcSourceCode = JSCreateSourceCodeFromFile(fileStr->fd(), jsSourceURL, nullptr, &jsStatus);
@@ -378,10 +391,13 @@ void JSCExecutor::setJSModulesUnbundle(std::unique_ptr<JSModulesUnbundle> unbund
 
 void JSCExecutor::bindBridge() throw(JSException) {
   SystraceSection s("JSCExecutor::bindBridge");
+
   std::call_once(m_bindFlag, [this] {
     auto global = Object::getGlobalObject(m_context);
     auto batchedBridgeValue = global.getProperty("__fbBatchedBridge");
+    LOGI("JSCExecutor.bindBridge __fbBatchedBridge");
     if (batchedBridgeValue.isUndefined()) {
+      LOGI("JSCExecutor.bindBridge batchedBridgeValue.isUndefined");
       auto requireBatchedBridge = global.getProperty("__fbRequireBatchedBridge");
       if (!requireBatchedBridge.isUndefined()) {
         batchedBridgeValue = requireBatchedBridge.asObject().callAsFunction({});
@@ -406,6 +422,7 @@ void JSCExecutor::callNativeModules(Value&& value) {
   CHECK(m_delegate) << "Attempting to use native modules without a delegate";
   try {
     auto calls = value.toJSONString();
+    LOGI("JSCExecutor.callNativeModules %s", calls.c_str());
     m_delegate->callNativeModules(*this, folly::parseJson(calls), true);
   } catch (...) {
     std::string message = "Error in callNativeModules()";
@@ -420,7 +437,7 @@ void JSCExecutor::callNativeModules(Value&& value) {
 
 void JSCExecutor::flush() {
   SystraceSection s("JSCExecutor::flush");
-
+  LOGI("JSCExecutor.flush");
   if (m_flushedQueueJS) {
     callNativeModules(m_flushedQueueJS->callAsFunction({}));
     return;
@@ -450,6 +467,7 @@ void JSCExecutor::flush() {
 
 void JSCExecutor::callFunction(const std::string& moduleId, const std::string& methodId, const folly::dynamic& arguments) {
   SystraceSection s("JSCExecutor::callFunction");
+  LOGI("JSCExecutor.callFunction moduleId:%s, methodId:%s", moduleId.c_str(), methodId.c_str());
   // This weird pattern is because Value is not default constructible.
   // The lambda is inlined, so there's no overhead.
 
@@ -474,6 +492,7 @@ void JSCExecutor::callFunction(const std::string& moduleId, const std::string& m
 
 void JSCExecutor::invokeCallback(const double callbackId, const folly::dynamic& arguments) {
   SystraceSection s("JSCExecutor::invokeCallback");
+  LOGI("JSCExecutor.invokeCallback");
   auto result = [&] {
     try {
       if (!m_invokeCallbackAndReturnFlushedQueueJS) {
@@ -495,7 +514,7 @@ void JSCExecutor::invokeCallback(const double callbackId, const folly::dynamic& 
 Value JSCExecutor::callFunctionSyncWithValue(
     const std::string& module, const std::string& method, Value args) {
   SystraceSection s("JSCExecutor::callFunction");
-
+  LOGI("JSCExecutor.callFunctionSyncWithValue");
   if (!m_callFunctionReturnResultAndFlushedQueueJS) {
     bindBridge();
   }
@@ -516,6 +535,7 @@ Value JSCExecutor::callFunctionSyncWithValue(
 }
 
 void JSCExecutor::setGlobalVariable(std::string propName, std::unique_ptr<const JSBigString> jsonValue) {
+  LOGI("JSCExecutor::setGlobalVariable propName: %s, value %s", propName.c_str(), jsonValue->c_str());
   try {
     SystraceSection s("JSCExecutor.setGlobalVariable",
                       "propName", propName);
@@ -577,10 +597,12 @@ void JSCExecutor::handleMemoryPressureCritical() {
 
 void JSCExecutor::flushQueueImmediate(Value&& queue) {
   auto queueStr = queue.toJSONString();
+  LOGI("JSCExecutor.flushQueueImmediate %s" , queueStr.c_str());
   m_delegate->callNativeModules(*this, folly::parseJson(queueStr), false);
 }
 
 void JSCExecutor::loadModule(uint32_t moduleId) {
+  LOGI("JSCExecutor.loadModule %d" , (int)moduleId);
   auto module = m_unbundle->getModule(moduleId);
   auto sourceUrl = String::createExpectingAscii(m_context, module.name);
   auto source = String::createExpectingAscii(m_context, module.code);
@@ -594,6 +616,7 @@ void JSCExecutor::installNativeHook(const char* name) {
 }
 
 JSValueRef JSCExecutor::getNativeModule(JSObjectRef object, JSStringRef propertyName) {
+  LOGI("JSCExecutor.getNativeModule");
   if (JSC_JSStringIsEqualToUTF8CString(m_context, propertyName, "name")) {
     return Value(m_context, String(m_context, "NativeModules"));
   }
@@ -624,6 +647,7 @@ JSValueRef JSCExecutor::nativeRequire(
 JSValueRef JSCExecutor::nativeFlushQueueImmediate(
     size_t argumentCount,
     const JSValueRef arguments[]) {
+  LOGI("JSCExecutor.nativeFlushQueueImmediate argumentCount:%d", (int)argumentCount);
   if (argumentCount != 1) {
     throw std::invalid_argument("Got wrong number of args");
   }
@@ -642,7 +666,7 @@ JSValueRef JSCExecutor::nativeCallSyncHook(
   unsigned int moduleId = Value(m_context, arguments[0]).asUnsignedInteger();
   unsigned int methodId = Value(m_context, arguments[1]).asUnsignedInteger();
   folly::dynamic args = folly::parseJson(Value(m_context, arguments[2]).toJSONString());
-
+  LOGI("JSCExecutor.nativeCallSyncHook moduleId:%d,methodId:%d", (int)moduleId, (int)methodId);
   if (!args.isArray()) {
     throw std::invalid_argument(
       folly::to<std::string>("method parameters should be array, but are ", args.typeName()));

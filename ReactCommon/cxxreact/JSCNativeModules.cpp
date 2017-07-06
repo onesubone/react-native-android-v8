@@ -4,6 +4,12 @@
 
 #include <string>
 
+#include <android/log.h>
+#define _RN_V8_DEBUG_ 1
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO  , "V8Application", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG  , "V8Application", __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN  , "V8Application", __VA_ARGS__)
+
 namespace facebook {
 namespace react {
 
@@ -41,6 +47,7 @@ void JSCNativeModules::reset() {
 }
 
 folly::Optional<Object> JSCNativeModules::createModule(const std::string& name, JSContextRef context) {
+  LOGI("JSCNativeModules::createModule moduleName %s", name.c_str());
   if (!m_genNativeModuleJS) {
     auto global = Object::getGlobalObject(context);
     m_genNativeModuleJS = global.getProperty("__fbGenNativeModule").asObject();
@@ -49,6 +56,7 @@ folly::Optional<Object> JSCNativeModules::createModule(const std::string& name, 
 
   auto result = m_moduleRegistry->getConfig(name);
   if (!result.hasValue()) {
+    LOGI("JSCNativeModules::createModule moduleName %s Return NUll!", name.c_str());
     return nullptr;
   }
 
