@@ -5,7 +5,7 @@
 #ifndef V8_UTILS_H
 #define V8_UTILS_H
 
-#include "include/v8.h"
+#include <v8.h>
 #include <string>
 
 #include <folly/json.h>

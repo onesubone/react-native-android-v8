@@ -8,7 +8,7 @@
 
 #include <cxxreact/ModuleRegistry.h>
 #include <folly/Optional.h>
-#include "include/v8.h"
+#include "v8.h"
 
 using namespace facebook::react;
 using namespace std;

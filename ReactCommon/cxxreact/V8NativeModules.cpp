@@ -1,6 +1,6 @@
 
 #include <string>
-#include "include/v8.h"
+#include "v8.h"
 #include "V8NativeModules.h"
 #include "V8Utils.h"
 #include <folly/json.h>

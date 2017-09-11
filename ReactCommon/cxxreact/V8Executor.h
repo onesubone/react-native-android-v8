@@ -12,7 +12,7 @@
 #include <cxxreact/V8NativeModules.h>
 #include <jschelpers/Value.h>
 #include "MessageQueueThread.h"
-#include "include/v8.h"
+#include "v8.h"
 #include <folly/Optional.h>
 #include <jschelpers/JSCHelpers.h>
 #include <folly/json.h>
