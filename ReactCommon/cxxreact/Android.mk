@@ -5,6 +5,9 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := reactnative
 
 LOCAL_SRC_FILES := \
+  V8Utils.cpp \
+  V8NativeModules.cpp \
+  V8Executor.cpp \
   CxxNativeModule.cpp \
   Instance.cpp \
   JSBigString.cpp \
@@ -35,9 +38,10 @@ LOCAL_CFLAGS += -Wall -Werror -fexceptions -frtti
 CXX11_FLAGS := -std=c++11
 LOCAL_CFLAGS += $(CXX11_FLAGS)
 LOCAL_EXPORT_CPPFLAGS := $(CXX11_FLAGS)
+LOCAL_LDLIBS:= -llog
 
 LOCAL_STATIC_LIBRARIES := jschelpers
-LOCAL_SHARED_LIBRARIES := libfb libfolly_json libjsc libglog
+LOCAL_SHARED_LIBRARIES := libfb libfolly_json libjsc libglog libv8 libv8platform libv8base libv8share
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -47,3 +51,7 @@ $(call import-module,jsc)
 $(call import-module,glog)
 $(call import-module,jschelpers)
 $(call import-module,privatedata)
+$(call import-module,v8)
+$(call import-module,v8base)
+$(call import-module,v8platform)
+$(call import-module,v8share)
