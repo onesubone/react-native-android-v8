@@ -64,6 +64,13 @@ Local<Value> fromDynamic(Isolate *isolate, Local<v8::Context> context, const fol
     return Local<Value>();
 }
 
+Local<T> safeToLocal(MaybeLocal<T> maybeLocal) {
+    if(!maybeLocal->IsEmpty()) {
+        return maybeLocal->ToLocalChecked();
+    }
+    return Local<T>();
+}
+
 void nativeLog(const FunctionCallbackInfo<Value> &args) {
     /*android_LogPriority logLevel = ANDROID_LOG_DEBUG;
     if (args.Length() > 1) {
@@ -81,7 +88,28 @@ void nativeLog(const FunctionCallbackInfo<Value> &args) {
 }
 
 
+std::pair<Local<Uint32>, Local<Uint32>> parseNativeRequireParameters(const v8::FunctionCallbackInfo<v8::Value> &args) {
+    Local<Uint32> moduleId, bundleId;
 
+        if (args.Length() == 1) {
+            moduleId = Local<Uint32>::Cast(args[0]);
+        } else if (argumentCount == 2) {
+            moduleId = Local<Uint32>::Cast(args[0]);
+            bundleId = Local<Uint32>::Cast(args[1]);
+        } else {
+            throw std::invalid_argument("Got wrong number of args");
+        }
+
+        if (moduleId->Value() < 0) {
+            throw std::invalid_argument(folly::to<std::string>("Received invalid module ID: ", toJsonString(args[0])));
+        }
+
+        if (bundleId->Value() < 0) {
+            throw std::invalid_argument(folly::to<std::string>("Received invalid bundle ID: ", toJsonString(args[1])));
+        }
+
+        return std::make_pair(static_cast<Local<Uint32>>(moduleId), static_cast<Local<Uint32>>(bundleId));
+    }
 
 
 

@@ -43,12 +43,16 @@ namespace v8 {
 
   Local<Value> fromJsonString(Isolate *isolate, Local<Context> context, const char *jsonStr);
 
-    Local<Value> fromJsonString(Isolate *isolate, Local<Context> context, const char *jsonStr, int length);
+  Local<Value> fromJsonString(Isolate *isolate, Local<Context> context, const char *jsonStr, int length);
 
   Local<Value> fromJsonString(Isolate *isolate, Local<Context> context, const Local<String> &jsonStr);
 
   Local<Value> fromDynamic(Isolate *isolate, Local<v8::Context> context, const folly::dynamic &value);
 
+  Local<T> safeToLocal(MaybeLocal<T> maybeLocal);
+
+
+  std::pair<uint32_t, uint32_t> parseNativeRequireParameters(const v8::FunctionCallbackInfo<v8::Value> &args);
 
   void nativeLog(const FunctionCallbackInfo<Value> &args);
   void printType(Local<Value> value, const char *desc);
