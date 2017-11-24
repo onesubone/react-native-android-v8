@@ -449,6 +449,18 @@ void JSCExecutor::loadModule(uint32_t bundleId, uint32_t moduleId) {
     executeScript(context, source);
 }
 
+Global<Value> V8Executor::getNativeModule(Local<String> property, const PropertyCallbackInfo<Value> &info) {
+     SystraceSection s("V8Executor.getNativeModule");
+    _ISOLATE_CONTEXT_ENTER;
+    LOGI("V8Executor.getNativeModule property length %d" , property->Length());
+    LOGI("V8Executor.getNativeModule property %s" , toStdString(property).c_str());
+    const std::string &pro = toStdString(property);
+    if ("name" == pro) {
+        return Global<Value>(isolate, toLocalString(isolate, "NativeModules"));
+    }
+    return m_nativeModules.getModule(isolate, context, pro);
+}
+
 void V8Executor::nativeRequire(const v8::FunctionCallbackInfo<v8::Value> &args) {
     SystraceSection s("V8Executor.nativeRequire");
     if (args.Length() != 2) {
