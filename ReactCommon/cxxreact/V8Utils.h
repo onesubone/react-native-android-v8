@@ -5,9 +5,10 @@
 #ifndef V8_UTILS_H
 #define V8_UTILS_H
 
-#include <v8.h>
+#include "v8.h"
 #include <string>
 
+#include <cxxreact/JSBigString.h>
 #include <folly/json.h>
 #include <android/log.h>
 #include <folly/Exception.h>
@@ -16,7 +17,6 @@
 #include <folly/Conv.h>
 #include <fcntl.h>
 #include "jschelpers/Value.h"
-#include "Executor.h"
 #include <android/log.h>
 #define _RN_V8_DEBUG_ 1
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO  , "V8Application", __VA_ARGS__)
@@ -49,6 +49,7 @@ namespace v8 {
 
   Local<Value> fromDynamic(Isolate *isolate, Local<v8::Context> context, const folly::dynamic &value);
 
+  template<class T>
   Local<T> safeToLocal(MaybeLocal<T> maybeLocal);
 
 

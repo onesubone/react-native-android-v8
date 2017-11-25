@@ -458,7 +458,7 @@ Global<Value> V8Executor::getNativeModule(Local<String> property, const Property
     if ("name" == pro) {
         return Global<Value>(isolate, toLocalString(isolate, "NativeModules"));
     }
-    return m_nativeModules.getModule(isolate, context, pro);
+    return m_nativeModules.getModule(isolate, context, std::move(pro));
 }
 
 void V8Executor::nativeRequire(const v8::FunctionCallbackInfo<v8::Value> &args) {

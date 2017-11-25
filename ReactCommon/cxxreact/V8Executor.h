@@ -4,7 +4,7 @@
 #pragma once
 
 #include <string>
-#include <cxxreact/Executor.h>
+#include <cxxreact/JSExecutor.h>
 #include <cxxreact/V8NativeModules.h>
 #include <jschelpers/Value.h>
 #include "MessageQueueThread.h"

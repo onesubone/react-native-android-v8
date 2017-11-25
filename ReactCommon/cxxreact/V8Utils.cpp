@@ -64,6 +64,7 @@ Local<Value> fromDynamic(Isolate *isolate, Local<v8::Context> context, const fol
     return Local<Value>();
 }
 
+template<class T>
 Local<T> safeToLocal(MaybeLocal<T> maybeLocal) {
     if(!maybeLocal->IsEmpty()) {
         return maybeLocal->ToLocalChecked();
