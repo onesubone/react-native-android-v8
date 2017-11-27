@@ -183,21 +183,21 @@ void V8Executor::setContextName(const std::string& name) {
   LOGI("V8Executor.setContextName name: %s", name.c_str());
 }
 
-static bool canUseInspector() {
-#ifdef WITH_INSPECTOR
-      return true; // WITH_INSPECTOR && Android
-#else
-       return false; // !WITH_INSPECTOR
-#endif
-}
-
-static bool canUseSamplingProfiler(JSContextRef context) {
-#if defined(WITH_JSC_EXTRA_TRACING)
-    return true;
-#else
-    return false;
-#endif
-}
+//static bool canUseInspector() {
+//#ifdef WITH_INSPECTOR
+//      return true; // WITH_INSPECTOR && Android
+//#else
+//       return false; // !WITH_INSPECTOR
+//#endif
+//}
+//
+//static bool canUseSamplingProfiler(JSContextRef context) {
+//#if defined(WITH_JSC_EXTRA_TRACING)
+//    return true;
+//#else
+//    return false;
+//#endif
+//}
 
 void V8Executor::initOnJSVMThread() throw(JSException) {
   SystraceSection s("V8Executor.initOnJSVMThread");
@@ -229,7 +229,7 @@ void V8Executor::initOnJSVMThread() throw(JSException) {
   LOGI("V8Executor.initOnJSVMThread Finished!!!!");
 }
 
-bool JSCExecutor::isNetworkInspected(const std::string &owner, const std::string &app, const std::string &device) {
+bool V8Executor::isNetworkInspected(const std::string &owner, const std::string &app, const std::string &device) {
     return false; // TODO
 }
 
@@ -254,7 +254,7 @@ void V8Executor::loadApplicationScript(std::unique_ptr<const JSBigString> script
   std::string scriptName = simpleBasename(sourceURL);
   LOGD("V8Executor::loadApplicationScript sourceUrl %s", scriptName.c_str());
   ReactMarker::logTaggedMarker(ReactMarker::RUN_JS_BUNDLE_START, scriptName.c_str());
-  Local<String> jsSourceURL = toLocalString(GetIsolate(), sourceURL);
+  // Local<String> jsSourceURL = toLocalString(GetIsolate(), sourceURL);
 
   // TODO t15069155: reduce the number of overrides here
 #ifdef WITH_FBJSCEXTENSIONS
@@ -292,7 +292,7 @@ void V8Executor::executeScript(Local<Context> context, const Local<String> &scri
     }
 }
 
-void JSCExecutor::setBundleRegistry(std::unique_ptr<RAMBundleRegistry> bundleRegistry) {
+void V8Executor::setBundleRegistry(std::unique_ptr<RAMBundleRegistry> bundleRegistry) {
     m_bundleRegistry = std::move(bundleRegistry);
 }
 
@@ -330,12 +330,12 @@ void V8Executor::callNativeModules(Local<Context> context, Local<Value> value) {
   SystraceSection s("V8Executor::callNativeModules");
   CHECK(m_delegate) << "Attempting to use native modules without a delegate";
   try {
-     if (!value->IsEmpty() && value->IsObject()) {
+     if (!value.IsEmpty() && value->IsObject()) {
         Local<Object> obj = Local<Object>::Cast(value);
         const std::string &arg = toJsonStdString(context, std::move(obj));
         m_delegate->callNativeModules(*this, folly::parseJson(std::move(arg)), true);
      }else{
-         m_delegate->callNativeModules(*this, {}, true);
+        m_delegate->callNativeModules(*this, folly::parseJson("{}"), true);
      }
   } catch (...) {
      std::string message = "Error in callNativeModules()";
@@ -437,14 +437,14 @@ void JSCExecutor::handleMemoryPressure(int pressureLevel) {
 }
 #endif
 
-bool V8Executor::supportsProfiling() {
-  return false;
-}
 
-void JSCExecutor::loadModule(uint32_t bundleId, uint32_t moduleId) {
+void V8Executor::loadModule(uint32_t bundleId, uint32_t moduleId) {
     _ISOLATE_CONTEXT_ENTER;
+    if(!m_bundleRegistry) {
+        return ;
+    }
     auto module = m_bundleRegistry->getModule(bundleId, moduleId);
-    auto sourceUrl = toLocalString(GetIsolate(), module.name);
+    // auto sourceUrl = toLocalString(GetIsolate(), module.name);
     auto source = toLocalString(GetIsolate(), module.code);
     executeScript(context, source);
 }
@@ -472,7 +472,7 @@ void V8Executor::nativeRequire(const v8::FunctionCallbackInfo<v8::Value> &args) 
     LOGI("V8Executor.nativeRequire bundleId %d, moduleId %d" , bundleId->Value(), moduleId->Value());
 
     ReactMarker::logMarker(ReactMarker::NATIVE_REQUIRE_START);
-    loadModule(bundleId, moduleId);
+    loadModule(bundleId->Value(), moduleId->Value());
     ReactMarker::logMarker(ReactMarker::NATIVE_REQUIRE_STOP);
 }
 

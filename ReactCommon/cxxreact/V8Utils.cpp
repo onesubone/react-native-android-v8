@@ -64,12 +64,12 @@ Local<Value> fromDynamic(Isolate *isolate, Local<v8::Context> context, const fol
     return Local<Value>();
 }
 
-template<class T>
-Local<T> safeToLocal(MaybeLocal<T> maybeLocal) {
-    if(!maybeLocal->IsEmpty()) {
-        return maybeLocal->ToLocalChecked();
+Local<Value> safeToLocal(const MaybeLocal<Value> &maybeLocal) {
+    Local<Value> res;
+    if(maybeLocal.ToLocal(&res)) {
+        return res;
     }
-    return Local<T>();
+    return Local<Value>();
 }
 
 void nativeLog(const FunctionCallbackInfo<Value> &args) {
@@ -91,26 +91,27 @@ void nativeLog(const FunctionCallbackInfo<Value> &args) {
 
 std::pair<Local<Uint32>, Local<Uint32>> parseNativeRequireParameters(const v8::FunctionCallbackInfo<v8::Value> &args) {
     Local<Uint32> moduleId, bundleId;
-
-        if (args.Length() == 1) {
-            moduleId = Local<Uint32>::Cast(args[0]);
-        } else if (argumentCount == 2) {
-            moduleId = Local<Uint32>::Cast(args[0]);
-            bundleId = Local<Uint32>::Cast(args[1]);
-        } else {
-            throw std::invalid_argument("Got wrong number of args");
-        }
-
-        if (moduleId->Value() < 0) {
-            throw std::invalid_argument(folly::to<std::string>("Received invalid module ID: ", toJsonString(args[0])));
-        }
-
-        if (bundleId->Value() < 0) {
-            throw std::invalid_argument(folly::to<std::string>("Received invalid bundle ID: ", toJsonString(args[1])));
-        }
-
-        return std::make_pair(static_cast<Local<Uint32>>(moduleId), static_cast<Local<Uint32>>(bundleId));
+    Isolate* isolate = args.GetIsolate();
+    Local<Context> context = isolate->GetCurrentContext();
+    if (args.Length() == 1) {
+        moduleId = Local<Uint32>::Cast(args[0]);
+    } else if (args.Length() == 2) {
+        moduleId = Local<Uint32>::Cast(args[0]);
+        bundleId = Local<Uint32>::Cast(args[1]);
+    } else {
+        throw std::invalid_argument("Got wrong number of args");
     }
+
+    if (moduleId->Value() < 0) {
+        throw std::invalid_argument(folly::to<std::string>("Received invalid module ID: ", toJsonStdString(context,Local<Object>::Cast(args[0]))));
+    }
+
+    if (bundleId->Value() < 0) {
+        throw std::invalid_argument(folly::to<std::string>("Received invalid bundle ID: ", toJsonStdString(context,Local<Object>::Cast(args[1]))));
+    }
+
+    return std::make_pair(static_cast<Local<Uint32>>(moduleId), static_cast<Local<Uint32>>(bundleId));
+}
 
 
 

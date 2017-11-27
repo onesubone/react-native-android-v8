@@ -13,6 +13,7 @@
 #include <jschelpers/JSCHelpers.h>
 #include <folly/json.h>
 #include <privatedata/PrivateDataBase.h>
+#include <cxxreact/RAMBundleRegistry.h>
 
 #ifndef RN_EXPORT
 #define RN_EXPORT __attribute__((visibility("default")))
@@ -20,6 +21,7 @@
 
 
 namespace v8 {
+
 class RN_EXPORT V8Executor : public JSExecutor, public PrivateDataBase {
 public:
   /**
