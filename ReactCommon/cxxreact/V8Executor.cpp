@@ -33,7 +33,11 @@
 
 namespace v8 {
 
-#define THROW_RUNTIME_ERROR(INFO) std::throw_with_nested(std::runtime_error(INFO))
+#define THROW_RUNTIME_ERROR(INFO) do { \
+        LOGW("THROW_RUNTIME_ERROR: %s", INFO); \
+        std::throw_with_nested(std::runtime_error(INFO)); \
+    } while(false)
+
 #define _ISOLATE_CONTEXT_ENTER Isolate *isolate = GetIsolate(); \
     Isolate::Scope isolate_scope(isolate); \
     HandleScope handle_scope(isolate); \
@@ -253,7 +257,7 @@ void V8Executor::loadApplicationScript(std::unique_ptr<const JSBigString> script
   SystraceSection s("V8Executor::loadApplicationScript", "sourceURL", sourceURL);
   std::string scriptName = simpleBasename(sourceURL);
   LOGD("V8Executor::loadApplicationScript sourceUrl %s", scriptName.c_str());
-  ReactMarker::logTaggedMarker(ReactMarker::RUN_JS_BUNDLE_START, scriptName.c_str());
+//  ReactMarker::logTaggedMarker(ReactMarker::RUN_JS_BUNDLE_START, scriptName.c_str());
   // Local<String> jsSourceURL = toLocalString(GetIsolate(), sourceURL);
 
   // TODO t15069155: reduce the number of overrides here
@@ -267,8 +271,8 @@ void V8Executor::loadApplicationScript(std::unique_ptr<const JSBigString> script
   executeScript(context, std::move(toLocalString(isolate, std::move(script->c_str()))));
 
   flush();
-  ReactMarker::logMarker(ReactMarker::CREATE_REACT_CONTEXT_STOP);
-  ReactMarker::logTaggedMarker(ReactMarker::RUN_JS_BUNDLE_STOP, scriptName.c_str());
+//  ReactMarker::logMarker(ReactMarker::CREATE_REACT_CONTEXT_STOP);
+//  ReactMarker::logTaggedMarker(ReactMarker::RUN_JS_BUNDLE_STOP, scriptName.c_str());
 }
 
 void V8Executor::executeScript(Local<Context> context, const Local<String> &script) throw(JSException) {
@@ -276,12 +280,15 @@ void V8Executor::executeScript(Local<Context> context, const Local<String> &scri
     Isolate *isolate = GetIsolate();
     TryCatch try_catch(isolate);
     Local<Script> compiled_script;
-    if (!Script::Compile(context, std::move(script)).ToLocal(&compiled_script)) {
+    LOGD("V8Executor::executeScript 111111111111111");
+    LOGD("V8Executor::executeScript script lenth %d, source %s", script->Length(), toStdString(script).c_str());
+    if (!Script::Compile(context, script).ToLocal(&compiled_script)) {
+        LOGD("V8Executor::executeScript 12121212121212121212");
         String::Utf8Value error(try_catch.Exception());
         // The script failed to compile; bail out.
         THROW_RUNTIME_ERROR("Error ExecuteScript while compile script!");
     }
-
+    LOGD("V8Executor::executeScript 2222222222222222222");
     // Run the script!
     Local<Value> result;
     if (!compiled_script->Run(context).ToLocal(&result)) {
@@ -333,9 +340,10 @@ void V8Executor::callNativeModules(Local<Context> context, Local<Value> value) {
      if (!value.IsEmpty() && value->IsObject()) {
         Local<Object> obj = Local<Object>::Cast(value);
         const std::string &arg = toJsonStdString(context, std::move(obj));
+        LOGI("callNativeModules arg: %s", arg.c_str());
         m_delegate->callNativeModules(*this, folly::parseJson(std::move(arg)), true);
      }else{
-        m_delegate->callNativeModules(*this, folly::parseJson("{}"), true);
+        m_delegate->callNativeModules(*this, folly::parseJson("null"), true);
      }
   } catch (...) {
      std::string message = "Error in callNativeModules()";

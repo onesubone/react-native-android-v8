@@ -122,7 +122,7 @@ namespace facebook {
     std::unique_ptr<JSExecutor> JSCExecutorFactory::createJSExecutor(
                                                                      std::shared_ptr<ExecutorDelegate> delegate, std::shared_ptr<MessageQueueThread> jsQueue) {
       // return folly::make_unique<JSCExecutor>(delegate, jsQueue, m_jscConfig);
-      return std::unique_ptr<JSExecutor>(new v8::V8Executor(delegate, jsQueue, m_jscConfig));
+        return std::unique_ptr<JSExecutor>(new v8::V8Executor(delegate, jsQueue, m_jscConfig));
     }
 
     JSCExecutor::JSCExecutor(std::shared_ptr<ExecutorDelegate> delegate,
