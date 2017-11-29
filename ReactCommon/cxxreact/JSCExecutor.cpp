@@ -47,6 +47,7 @@
 #include <jsc_config_android.h>
 #endif
 
+#include <cxxreact/V8Utils.h>
 #include <cxxreact/V8Executor.h>
 
 namespace facebook {

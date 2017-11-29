@@ -110,37 +110,10 @@ void V8Executor::installNativePropertyHook(Local<ObjectTemplate> global, const c
         }
     };
     Local<ObjectTemplate> nativeModuleProxyTemplate = ObjectTemplate::New(GetIsolate());
-   // NamedPropertyHandlerConfiguration configuration(funcWrapper::call);
-    //nativeModuleProxyTemplate->SetHandler(configuration);
     nativeModuleProxyTemplate->SetHandler(NamedPropertyHandlerConfiguration(funcWrapper::call));
     global->Set(toLocalString(GetIsolate(), name), nativeModuleProxyTemplate);
     LOGI("V8Executor.installNativePropertyHook Finished name: %s", name);
 }
-
-//    template<Global<Value> (V8Executor::*method)(Local<String> property, const PropertyCallbackInfo<Value> &info)>
-//    void V8Executor::installNativePropertyHook(Local<Object> global, const char *name) {
-//        LOGI("V8Executor.installNativePropertyHook name: %s", name);
-//        struct funcWrapper {
-//            static void getter(Local<String> localProperty, const PropertyCallbackInfo<Value> &info) {
-//                Isolate *isolate = info.GetIsolate();
-//                HandleScope handle_scope(isolate);
-//                Local<Context> context = isolate->GetCurrentContext();
-//                auto ptr = context->GetAlignedPointerFromEmbedderData(1);
-//                V8Executor *executor = static_cast<V8Executor *>(ptr);
-//                if (!executor) {
-//                    THROW_RUNTIME_ERROR("Get Empty Context in installNativePropertyHook!");
-//                }
-//                Global<Value> res = (executor->*method)(localProperty, info);
-//                info.GetReturnValue().Set(std::move(res));
-//            }
-//
-//            static void setter(Local<String> property, Local<Value> value, const PropertyCallbackInfo<void>& info) {
-//                LOGI("V8Executor.installNativePropertyHook setter");
-//            }
-//        };
-//        global->SetAccessor(toLocalString(GetIsolate(), name), &funcWrapper::getter, nullptr);
-//        LOGI("V8Executor.installNativePropertyHook Finished name: %s", name);
-//    }
 
 Isolate *V8Executor::GetIsolate() {
     if (m_isolate) {
@@ -186,22 +159,6 @@ void V8Executor::destroy() {
 void V8Executor::setContextName(const std::string& name) {
   LOGI("V8Executor.setContextName name: %s", name.c_str());
 }
-
-//static bool canUseInspector() {
-//#ifdef WITH_INSPECTOR
-//      return true; // WITH_INSPECTOR && Android
-//#else
-//       return false; // !WITH_INSPECTOR
-//#endif
-//}
-//
-//static bool canUseSamplingProfiler(JSContextRef context) {
-//#if defined(WITH_JSC_EXTRA_TRACING)
-//    return true;
-//#else
-//    return false;
-//#endif
-//}
 
 void V8Executor::initOnJSVMThread() throw(JSException) {
   SystraceSection s("V8Executor.initOnJSVMThread");
@@ -447,10 +404,10 @@ void JSCExecutor::handleMemoryPressure(int pressureLevel) {
 
 
 void V8Executor::loadModule(uint32_t bundleId, uint32_t moduleId) {
-    _ISOLATE_CONTEXT_ENTER;
     if(!m_bundleRegistry) {
         return ;
     }
+    _ISOLATE_CONTEXT_ENTER;
     auto module = m_bundleRegistry->getModule(bundleId, moduleId);
     // auto sourceUrl = toLocalString(GetIsolate(), module.name);
     auto source = toLocalString(GetIsolate(), module.code);

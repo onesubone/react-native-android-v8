@@ -1,0 +1,1 @@
+__d(function(r,n,t,a){'use strict';var e=n(13);t.exports=function(r){var n,t={};r instanceof Object&&!Array.isArray(r)||e(!1);for(n in r)r.hasOwnProperty(n)&&(t[n]=n);return t}},129);

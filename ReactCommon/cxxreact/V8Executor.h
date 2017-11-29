@@ -109,12 +109,8 @@ private:
 
   template<void (V8Executor::*method)(const v8::FunctionCallbackInfo<v8::Value> &args)>
   void installNativeFunctionHook(Local<ObjectTemplate> global, const char *name);
-
   template<Global<Value> (V8Executor::*method)(Local<String> property, const PropertyCallbackInfo<Value> &info)>
   void installNativePropertyHook(Local<ObjectTemplate> global, const char *name);
-  template<Global<Value> (V8Executor::*method)(Local<String> property, const PropertyCallbackInfo<Value> &info)>
-  void installNativePropertyHook(Local<Object> global, const char *name);
-
 
   void nativeRequire(const FunctionCallbackInfo<Value> &args);
   void nativeFlushQueueImmediate(const FunctionCallbackInfo<Value> &args);

@@ -110,7 +110,7 @@ std::pair<Local<Uint32>, Local<Uint32>> parseNativeRequireParameters(const v8::F
         throw std::invalid_argument(folly::to<std::string>("Received invalid bundle ID: ", toJsonStdString(context,Local<Object>::Cast(args[1]))));
     }
 
-    return std::make_pair(static_cast<Local<Uint32>>(moduleId), static_cast<Local<Uint32>>(bundleId));
+    return std::make_pair(static_cast<Local<Uint32>>(bundleId), static_cast<Local<Uint32>>(moduleId));
 }
 
 
