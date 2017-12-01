@@ -73,18 +73,17 @@ Local<Value> safeToLocal(const MaybeLocal<Value> &maybeLocal) {
 }
 
 void nativeLog(const FunctionCallbackInfo<Value> &args) {
-    /*android_LogPriority logLevel = ANDROID_LOG_DEBUG;
+    android_LogPriority logLevel = ANDROID_LOG_DEBUG;
     if (args.Length() > 1) {
         int32_t level = Int32::Cast(*(args[1]))->Value();
         // The lowest log level we get from JS is 0. We shift and cap it to be
         // in the range the Android logging method expects.
         logLevel = std::min(static_cast<android_LogPriority>(level + ANDROID_LOG_DEBUG), ANDROID_LOG_FATAL);
-    }*/
+    }
     if (args.Length() > 0) {
         Local<String> log = Local<String>::Cast(args[0]);
         const std::string &str = toStdString(log);
-        // __android_log_print(logLevel, "ReactNativeJS", str.c_str(), NULL);
-        LOGI("nativeLog %s", str.c_str());
+        __android_log_print(logLevel, "ReactNativeJS", "%s", str.c_str());
     }
 }
 

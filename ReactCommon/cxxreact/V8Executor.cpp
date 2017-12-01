@@ -10,6 +10,8 @@
 #include <folly/Conv.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <sys/socket.h>
+#include <system_error>
 
 #if defined(WITH_JSC_MEMORY_PRESSURE)
 #include <jsc_memory.h>
@@ -48,8 +50,16 @@ Isolate *V8Executor::m_isolate = nullptr;
 
 
 #if DEBUG
-static void nativeInjectHMRUpdate() {
-    // TODO, inject javaScript code
+static void nativeInjectHMRUpdate(const FunctionCallbackInfo<Value> &args) {
+  SystraceSection s("V8Executor.nativeInjectHMRUpdate");
+  if (args.Length() != 2) {
+    throw std::invalid_argument("Got wrong number of args");
+  }
+
+  Local<String> execJSString = Local<String>::Cast(args[0]);
+  Local<String> jsURL = Local<String>::Cast(args[1]);
+
+  executeScript(args.GetIsolate()->GetCurrentContext(), execJSString);
 }
 #endif
 
@@ -96,8 +106,6 @@ void V8Executor::installNativePropertyHook(Local<ObjectTemplate> global, const c
     struct funcWrapper {
         static void call(Local<Name> localProperty, const PropertyCallbackInfo<Value> &info) {
             printType(localProperty, "installNativePropertyHook.localProperty");
-//            Isolate *isolate = info.GetIsolate();
-//            HandleScope handle_scope(isolate);
             Local<Context> context = info.GetIsolate()->GetCurrentContext();
             auto ptr = context->GetAlignedPointerFromEmbedderData(1);
             V8Executor *executor = static_cast<V8Executor *>(ptr);
@@ -160,6 +168,15 @@ void V8Executor::setContextName(const std::string& name) {
   LOGI("V8Executor.setContextName name: %s", name.c_str());
 }
 
+static bool canUseInspector(JSContextRef context) {
+#ifdef WITH_INSPECTOR
+      return true; // WITH_INSPECTOR && Android
+#endif
+#else
+      return false; // !WITH_INSPECTOR
+#endif
+}
+
 void V8Executor::initOnJSVMThread() throw(JSException) {
   SystraceSection s("V8Executor.initOnJSVMThread");
   // TODO，not support Inspector now!
@@ -167,6 +184,7 @@ void V8Executor::initOnJSVMThread() throw(JSException) {
   Isolate::Scope isolate_scope(isolate);
   HandleScope handle_scope(isolate);
   Local<ObjectTemplate> global = ObjectTemplate::New(isolate);
+
   // Bind the global 'print' function to the C++ Print callback.
   installNativeFunctionHook<&V8Executor::nativeFlushQueueImmediate>(global, "nativeFlushQueueImmediate");
   installNativeFunctionHook<&V8Executor::nativeCallSyncHook>(global, "nativeCallSyncHook");
@@ -181,17 +199,17 @@ void V8Executor::initOnJSVMThread() throw(JSException) {
   // TODO, trace and log
   // native require
   installNativeFunctionHook<&V8Executor::nativeRequire>(global, "nativeRequire");
-  installNativePropertyHook<&V8Executor::getNativeModule>(global, "nativeModuleProxy");
+  {
+      SystraceSection s("nativeModuleProxy object");
+      installNativePropertyHook<&V8Executor::getNativeModule>(global, "nativeModuleProxy");
+  }
   Local<Context> context = Context::New(isolate, NULL, global);
   Context::Scope context_scope(context);
+  // Add a pointer to ourselves so we can retrieve it later in our hooks
   context->SetAlignedPointerInEmbedderData(1, this);
 
   m_context.Reset(isolate, context);
   LOGI("V8Executor.initOnJSVMThread Finished!!!!");
-}
-
-bool V8Executor::isNetworkInspected(const std::string &owner, const std::string &app, const std::string &device) {
-    return false; // TODO
 }
 
 void V8Executor::terminateOnJSVMThread() {
